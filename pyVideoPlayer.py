@@ -22,9 +22,10 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gst", "1.0")
 gi.require_version("GstVideo", "1.0")
-from gi.repository import Gst, Gtk, Gdk, GLib, GstVideo
+from gi.repository import Gst, Gtk, Gdk, GLib, GstVideo, GObject
 
 import sys
+import ctypes
 
 class GenericException(Exception):
     pass
@@ -82,6 +83,7 @@ class GstPlayer:
         builder.connect_signals(Handler())
 
         self.movie_window = builder.get_object("play_here")
+        self.movie_window.set_double_buffered (True)
         self.playpause_button = builder.get_object("playpause_togglebutton")
         self.slider = builder.get_object("progress")
         self.slider_handler_id = self.slider.connect("value-changed", self.on_slider_seek)
@@ -94,11 +96,10 @@ class GstPlayer:
         
         # setting up videoplayer
         self.player = Gst.ElementFactory.make("playbin", "player")
-        self.sink = Gst.ElementFactory.make("xvimagesink")
+        self.sink = Gst.ElementFactory.make("glimagesink")  # xvimagesink, autovideosink, d3dvideosink, osxvideosink, gtksink, gtkglsink, glimagesink
         #self.sink.set_property("force-aspect-ratio", True)
 
     def toggle_fullscreen(self):
-
         if self.is_fullscreen:
             self.window.unfullscreen()
             self.builder.get_object("box2").show()
@@ -135,15 +136,22 @@ class GstPlayer:
         #uri = "file://" + os.path.abspath(f)
         self.player.set_property("uri", uri)
         
+        video_window = self.movie_window.get_property('window')
         if sys.platform == "win32":
-            pass
+            if not video_window.ensure_native():
+                print("Error - video playback requires a native window")
+            ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+            ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object]
+            drawingarea_gpointer = ctypes.pythonapi.PyCapsule_GetPointer(video_window.__gpointer__, None)
+            gdkdll = ctypes.CDLL ("libgdk-3-0.dll")
+            win_id = gdkdll.gdk_win32_window_get_handle(drawingarea_gpointer)
         else: # Linux
             # make playbin play in specified DrawingArea widget instead of
             # separate, GstVideo needed
-            win_id = self.movie_window.get_property("window").get_xid()
-            
-            self.sink.set_window_handle(win_id)
-            self.player.set_property("video-sink", self.sink)
+            win_id = self.movie_window.get_window().get_xid()
+
+        self.sink.set_window_handle(win_id)
+        self.player.set_property("video-sink", self.sink)
             
     def play(self):
         self.is_playing = True
