@@ -97,6 +97,7 @@ class GstPlayer:
         # setting up videoplayer
         self.player = Gst.ElementFactory.make("playbin", "player")
         if sys.platform == "win32":
+            window.maximize() # a somewhat "fix" to 'glimagesink' not resizing
             self.sink = Gst.ElementFactory.make("glimagesink")  # xvimagesink, autovideosink, d3dvideosink, osxvideosink, gtksink, gtkglsink, glimagesink
         else:
             self.sink = Gst.ElementFactory.make("xvimagesink")
