@@ -96,7 +96,10 @@ class GstPlayer:
         
         # setting up videoplayer
         self.player = Gst.ElementFactory.make("playbin", "player")
-        self.sink = Gst.ElementFactory.make("glimagesink")  # xvimagesink, autovideosink, d3dvideosink, osxvideosink, gtksink, gtkglsink, glimagesink
+        if sys.platform == "win32":
+            self.sink = Gst.ElementFactory.make("glimagesink")  # xvimagesink, autovideosink, d3dvideosink, osxvideosink, gtksink, gtkglsink, glimagesink
+        else:
+            self.sink = Gst.ElementFactory.make("xvimagesink")
         #self.sink.set_property("force-aspect-ratio", True)
 
     def toggle_fullscreen(self):
