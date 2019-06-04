@@ -1,5 +1,5 @@
 # pyVideoPlayer
-A simple Python Video Player.  Written in Python 3
+A simple Python Video Player.  Written in Python 3 and GTK 3 with GStreamer
 
 
 Usage:
