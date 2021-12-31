@@ -8,7 +8,8 @@ Usage:
 
 Keyboard shortcuts:
 
-F11 - to fullscreen, again to windowed screen.
+f key or F11 - to fullscreen, again to windowed screen.
 
+Left or Right arrows to change videos in a current directory.
 
-Runs well in Linux, works in Windows.
+Runs in both Linux and Windows.
