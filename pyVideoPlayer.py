@@ -16,7 +16,9 @@
 # You may contact Stan S via electronic mail with the address vfpro777@yahoo.com
 
 import os
+import sys
 import time
+import ctypes
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -24,104 +26,85 @@ gi.require_version("Gst", "1.0")
 gi.require_version("GstVideo", "1.0")
 from gi.repository import Gst, Gtk, Gdk, GLib, GstVideo, GObject
 
-import sys
-import ctypes
+Gst.init(None)
 
 class GenericException(Exception):
     pass
-
-
+    
 class Handler:
-
     def on_window_destroy(self, *args):
         Gtk.main_quit()
 
     def on_playpause_togglebutton_toggled(self, widget):
-        if app.playpause_button.get_active():
+        if player.playpause_button.get_active():
             img = Gtk.Image.new_from_icon_name(Gtk.STOCK_MEDIA_PLAY,
                                                Gtk.IconSize.BUTTON)
             widget.set_property("image", img)
-            app.pause()
+            player.pause()
         else:
             img = Gtk.Image.new_from_icon_name(Gtk.STOCK_MEDIA_PAUSE,
                                                Gtk.IconSize.BUTTON)
             widget.set_property("image", img)
-            app.play()
+            player.play()
        
     def on_forward_clicked(self, widget):
-        app.skip_time()
+        player.skip_time()
 
     def on_backward_clicked(self, widget):
-        app.skip_time(-1)
+        player.skip_time(-1)
     
     def on_progress_value_changed(self, widget):
-        app.on_slider_seek
+        player.on_slider_seek
 
     def on_vbutton_clicked(self, widget):
-        app.clear_playbin()
-        app.setup_player("")
-        if app.playpause_button.get_active() is True:
-            app.playpause_button.set_active(False)
+        player.clear_playbin()
+        player.setup_player("")
+        if player.playpause_button.get_active() is True:
+            player.playpause_button.set_active(False)
         else:
-            app.play()
+            player.play()
+
+if sys.platform == 'win32':
+    PyCapsule_GetPointer = ctypes.pythonapi.PyCapsule_GetPointer
+    PyCapsule_GetPointer.restype = ctypes.c_void_p
+    PyCapsule_GetPointer.argtypes = [ctypes.py_object]
+    gdkdll = ctypes.CDLL('libgdk-3-0.dll')
+    gdkdll.gdk_win32_window_get_handle.argtypes = [ctypes.c_void_p]
+    
+    def get_window_handle(widget):
+        window = widget.get_window()
+        if not window.ensure_native():
+            raise Exception('video playback requires a native window')
+        
+        window_gpointer = PyCapsule_GetPointer(window.__gpointer__, None)
+        handle = gdkdll.gdk_win32_window_get_handle(window_gpointer)
+        return handle
+else:
+    def get_window_handle(widget):
+        return widget.get_window().get_xid()
 
 
-class GstPlayer:
+class VideoPlayer:
 
     is_fullscreen = False
 
-    def __init__(self):
-        
-        # init GStreamer
-        Gst.init(None)
-        
-        # setting up builder
-        builder = Gtk.Builder()
-        self.builder = builder
-        builder.add_from_string(Glade_file().get_string())
-        
-        builder.connect_signals(Handler())
-
-        self.movie_window = builder.get_object("play_here")
-        self.movie_window.set_double_buffered (True)
+    def __init__(self, window, canvas, filelist, index = 0):
+        self.window = window
+        self._canvas = canvas
+        self._setupplayer()
+        self.index = index
+        self.files = filelist 
+    
         self.playpause_button = builder.get_object("playpause_togglebutton")
         self.slider = builder.get_object("progress")
         self.slider_handler_id = self.slider.connect("value-changed", self.on_slider_seek)
-
-        window = builder.get_object("window")
-        self.window = window
+    
+    def _setupplayer(self):
+        # The element with the set_window_handle function will be stored here
+        self._video_overlay = None
+        self.player = Gst.ElementFactory.make("playbin", "MultimediaPlayer")
+        self._setup_signal_handlers()
         
-        window.show_all()
-        window.connect("key-press-event", self.on_key_press)
-        
-        # setting up videoplayer
-        self.player = Gst.ElementFactory.make("playbin", "player")
-        if sys.platform == "win32":
-            window.maximize() # a somewhat "fix" to 'glimagesink' not resizing
-            self.sink = Gst.ElementFactory.make("glimagesink")  # xvimagesink, autovideosink, d3dvideosink, osxvideosink, gtksink, gtkglsink, glimagesink
-        else:
-            self.sink = Gst.ElementFactory.make("xvimagesink")
-        #self.sink.set_property("force-aspect-ratio", True)
-
-    def toggle_fullscreen(self):
-        if self.is_fullscreen:
-            self.window.unfullscreen()
-            self.builder.get_object("box2").show()
-            self.builder.get_object("box3").show()
-
-            self.is_fullscreen = False
-        else:
-            self.window.fullscreen()
-            self.builder.get_object("box2").hide()
-            self.builder.get_object("box3").hide()
-            self.is_fullscreen = True        
-          
-    def on_key_press(self, widget, event):
-        if event.keyval == Gdk.KEY_Escape:
-            Gtk.main_quit()
-        elif event.keyval == Gdk.KEY_F11:
-            self.toggle_fullscreen()
-            
     def setup_player(self,f):
         # file to play must be transmitted as uri
         dialog = Gtk.FileChooserDialog("Please choose a file", self.window,
@@ -137,26 +120,76 @@ class GstPlayer:
             
         uri = dialog.get_uri()
         dialog.destroy()
-        #uri = "file://" + os.path.abspath(f)
         self.player.set_property("uri", uri)
         
-        video_window = self.movie_window.get_property('window')
-        if sys.platform == "win32":
-            if not video_window.ensure_native():
-                print("Error - video playback requires a native window")
-            ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
-            ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object]
-            drawingarea_gpointer = ctypes.pythonapi.PyCapsule_GetPointer(video_window.__gpointer__, None)
-            gdkdll = ctypes.CDLL ("libgdk-3-0.dll")
-            win_id = gdkdll.gdk_win32_window_get_handle(drawingarea_gpointer)
-        else: # Linux
-            # make playbin play in specified DrawingArea widget instead of
-            # separate, GstVideo needed
-            win_id = self.movie_window.get_window().get_xid()
+    def _setup_signal_handlers(self):
+        self._canvas.connect('realize', self._on_canvas_realize)
+        bus = self.player.get_bus()
+        bus.enable_sync_message_emission()
+        bus.connect('sync-message::element', self._on_sync_element_message)
+    
+    def _on_sync_element_message(self, bus, message):
+        if message.get_structure().get_name() == 'prepare-window-handle':
+            self._video_overlay = message.src
+            self._video_overlay.set_window_handle(self._canvas_window_handle)
+    
+    def _on_canvas_realize(self, canvas):
+        self._canvas_window_handle = get_window_handle(canvas)
 
-        self.sink.set_window_handle(win_id)
-        self.player.set_property("video-sink", self.sink)
+    def start(self):
+        self.player.set_property('uri',  self.files[self.index])
+        self.player.set_state(Gst.State.PLAYING)
+    
+    def toggle_fullscreen(self):
+        if self.is_fullscreen:
+            self.window.unfullscreen()
+            #self.builder.get_object("box2").show()
+            #self.builder.get_object("box3").show()
+            self.is_fullscreen = False
+        else:
+            self.window.fullscreen()
+            #self.builder.get_object("box2").hide()
+            #self.builder.get_object("box3").hide()
+            self.is_fullscreen = True   
+    
+    def _openVideo(self):
+        self.window.set_title( self.files[self.index] )
+        self.player.set_state(Gst.State.NULL)
+        self.player.set_property("uri", self.files[self.index] )
+        #self.player.set_state(Gst.State.PLAYING)
+        self.play()
+
+    def previousVideo(self):
+        print('previousvideo')
+        self.index -= 1
+        if self.index <= -1:
+            self.index = 0
             
+        print ( self.files[self.index] )
+        self._openVideo()
+        
+    def nextVideo(self):
+        print('nextvideo')
+        self.index += 1
+        if self.index >= len(self.files):
+            self.index = len(self.files) - 1
+            
+        print ( self.files[self.index] )
+        self._openVideo()
+        
+    def on_key_press(self, widget, event):
+        key = Gdk.keyval_name(event.keyval)
+        if key == 'Left':
+            self.previousVideo()
+            return True
+        elif key == 'Right':
+            self.nextVideo()
+            return True
+        elif key == 'f' or key == 'F11':
+            self.toggle_fullscreen()
+        elif key == 'Escape':
+            Gtk.main_quit()
+
     def play(self):
         self.is_playing = True
         self.player.set_state(Gst.State.PLAYING)
@@ -173,7 +206,7 @@ class GstPlayer:
 
     def skip_time(self,direction=1):
         #skip 20 seconds on forward/backward button
-        app.player.seek_simple(Gst.Format.TIME,  Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, 
+        player.player.seek_simple(Gst.Format.TIME,  Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, 
             self.current_position() + float(20) * Gst.SECOND * direction )
 
     def update_slider(self):
@@ -210,10 +243,6 @@ class GstPlayer:
             self.player.set_state(Gst.State.NULL)
         except:
             pass
-
-    def main(self):
-        Gtk.main()
-
 
 class Glade_file:
     gladestring = """
@@ -394,8 +423,40 @@ class Glade_file:
   </object>
 </interface>
 """
+
     def get_string(self):
         return self.gladestring
 
-app = GstPlayer()
-app.main()
+
+if __name__ == "__main__":
+
+    if len(sys.argv) > 1:
+
+        ext = (".mp4",".mkv")
+        videos = []
+        directory = os.path.dirname(   os.path.abspath(sys.argv[1])   )
+        print ('directory' + directory )
+        print ( 'file:///' + os.path.abspath(os.path.join(directory, sys.argv[1])) )
+        videos.append ( 'file:///' + os.path.abspath(os.path.join(directory, sys.argv[1])) )
+        
+        files = sorted(os.listdir(directory), reverse = True)
+        for file in files:
+            if file.lower().endswith(ext):
+                videos.append('file:///' + os.path.abspath(os.path.join(directory, file)))
+            
+        print ( 'length of videos:' + str(len(videos)) )
+        for v in videos:
+            print (v)
+        
+        builder = Gtk.Builder()
+        builder.add_from_string(Glade_file().get_string())       
+        builder.connect_signals(Handler())
+        window = builder.get_object("window")
+
+        canvas = builder.get_object("play_here")
+        player = VideoPlayer(window, canvas, videos)
+        window.connect("key-press-event", player.on_key_press)
+        canvas.connect('realize', lambda *_: player.start())
+        window.show_all()
+        Gtk.main()
+        
