@@ -34,6 +34,10 @@ else:
         return widget.get_window().get_xid()
 
 class VideoPlayer:
+
+    is_fullscreen = False
+    is_playing = False 
+    
     def __init__(self, window, canvas, filelist, index = 0):
         self.window = window
         self._canvas = canvas
@@ -70,18 +74,31 @@ class VideoPlayer:
         self.player.set_property("uri", self.files[self.index] )
         self.player.set_state(Gst.State.PLAYING)
 
+    def toggle_fullscreen(self):
+        if self.is_fullscreen:
+            self.window.unfullscreen()
+            self.is_fullscreen = False
+        else:
+            self.window.fullscreen()
+            self.is_fullscreen = True  
+
+    def toggle_playpause(self):
+        if self.is_playing:
+            self.player.set_state(Gst.State.PAUSED)
+            self.is_playing = False
+        else:
+            self.player.set_state(Gst.State.PLAYING)
+            self.is_playing = True
+
     def previousVideo(self):
-        print('previous video')
         self.index -= 1
         if self.index <= -1:
             self.index = 0
             
         print ( self.files[self.index] )
-        
         self._openVideo()
         
     def nextVideo(self):
-        print('next video')
         self.index += 1
         if self.index >= len(self.files):
             self.index = len(self.files) - 1
@@ -90,7 +107,6 @@ class VideoPlayer:
         self._openVideo()
         
     def on_key_press(self, widget, event):
-
         key = Gdk.keyval_name(event.keyval)
         if key == 'Left':
             self.previousVideo()
@@ -98,10 +114,12 @@ class VideoPlayer:
         elif key == 'Right':
             self.nextVideo()
             return True
-        elif key == 'f' or key == Gdk.KEY_F11:
+        elif key == 'f' or key == 'F11':
             self.toggle_fullscreen()
+        elif key == 'space':
+            self.toggle_playpause()
         elif key == 'Escape':
-            Gtk.main_quit()
+            Gtk.main_quit()            
 
 if __name__ == "__main__":
 
@@ -144,4 +162,4 @@ if __name__ == "__main__":
         window.connect('destroy', Gtk.main_quit)
         window.show_all()
         Gtk.main()
-        
+
