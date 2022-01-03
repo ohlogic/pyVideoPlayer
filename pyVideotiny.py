@@ -141,6 +141,8 @@ if __name__ == "__main__":
         for v in videos:
             print (v)
         
+        
+        
         window = Gtk.Window()
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -158,8 +160,9 @@ if __name__ == "__main__":
         window.connect("key-press-event", player.on_key_press)
 
         canvas1.connect('realize', lambda *_: player.start())
+        player.is_playing = True 
         
         window.connect('destroy', Gtk.main_quit)
         window.show_all()
         Gtk.main()
-
+        
