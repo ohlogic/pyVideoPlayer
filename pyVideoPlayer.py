@@ -202,9 +202,7 @@ class VideoPlayer:
         elif key == 'space':
             self.toggle_playpause()
         elif key == 'Escape':        
-            Gtk.main_quit()
-        else:
-            print ('KEY:' + key)    
+            Gtk.main_quit()   
 
     def play(self):
         self.is_playing = True
