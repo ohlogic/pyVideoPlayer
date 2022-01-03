@@ -88,16 +88,19 @@ class VideoPlayer:
 
     is_fullscreen = False
 
-    def __init__(self, window, canvas, filelist, index = 0):
+    def __init__(self, builder, window, canvas, filelist, index = 0):
+        self.builder = builder
         self.window = window
         self._canvas = canvas
-        self._setupplayer()
-        self.index = index
         self.files = filelist 
-    
+        self.index = index
+        
+        self._setupplayer()
+        
         self.playpause_button = builder.get_object("playpause_togglebutton")
         self.slider = builder.get_object("progress")
         self.slider_handler_id = self.slider.connect("value-changed", self.on_slider_seek)
+        
     
     def _setupplayer(self):
         # The element with the set_window_handle function will be stored here
@@ -143,13 +146,13 @@ class VideoPlayer:
     def toggle_fullscreen(self):
         if self.is_fullscreen:
             self.window.unfullscreen()
-            #self.builder.get_object("box2").show()
-            #self.builder.get_object("box3").show()
+            self.builder.get_object("box2").show()
+            self.builder.get_object("box3").show()
             self.is_fullscreen = False
         else:
             self.window.fullscreen()
-            #self.builder.get_object("box2").hide()
-            #self.builder.get_object("box3").hide()
+            self.builder.get_object("box2").hide()
+            self.builder.get_object("box3").hide()
             self.is_fullscreen = True   
     
     def _openVideo(self):
@@ -452,9 +455,9 @@ if __name__ == "__main__":
         builder.add_from_string(Glade_file().get_string())       
         builder.connect_signals(Handler())
         window = builder.get_object("window")
-
         canvas = builder.get_object("play_here")
-        player = VideoPlayer(window, canvas, videos)
+        
+        player = VideoPlayer(builder, window, canvas, videos)
         window.connect("key-press-event", player.on_key_press)
         canvas.connect('realize', lambda *_: player.start())
         window.show_all()
