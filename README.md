@@ -14,9 +14,9 @@ Spacebar - toggle play or pause video.
 
 Left or Right arrows - change videos in a current directory.
 
+
+
 Runs in both Linux and Windows.
-
-
 
 
 Windows install
