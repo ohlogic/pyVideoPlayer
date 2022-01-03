@@ -1,16 +1,15 @@
 #!/usr/bin/python3
 
 import os
+import sys
 import time
+import ctypes
 
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gst", "1.0")
 gi.require_version("GstVideo", "1.0")
 from gi.repository import Gst, Gtk, Gdk, GLib, GstVideo, GObject
-
-import sys
-import ctypes
 
 Gst.init(None)
 
@@ -140,7 +139,6 @@ if __name__ == "__main__":
         print ( 'length of videos:' + str(len(videos)) )
         for v in videos:
             print (v)
-        
         
         
         window = Gtk.Window()
