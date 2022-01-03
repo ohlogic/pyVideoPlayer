@@ -12,7 +12,7 @@ f key or F11 - to fullscreen, again to windowed screen.
 
 Spacebar - toggle play or pause video.
 
-Left or Right arrows to change videos in a current directory.
+Left or Right arrows - change videos in a current directory.
 
 Runs in both Linux and Windows.
 
