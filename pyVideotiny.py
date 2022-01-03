@@ -140,7 +140,6 @@ if __name__ == "__main__":
         for v in videos:
             print (v)
         
-        
         window = Gtk.Window()
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
