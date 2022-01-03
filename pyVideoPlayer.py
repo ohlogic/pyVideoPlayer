@@ -87,7 +87,8 @@ else:
 class VideoPlayer:
 
     is_fullscreen = False
-
+    is_playing = False 
+    
     def __init__(self, builder, window, canvas, filelist, index = 0):
         self.builder = builder
         self.window = window
@@ -141,7 +142,7 @@ class VideoPlayer:
 
     def start(self):
         self.player.set_property('uri',  self.files[self.index])
-        self.player.set_state(Gst.State.PLAYING)
+        self.play()
     
     def toggle_fullscreen(self):
         if self.is_fullscreen:
@@ -155,6 +156,14 @@ class VideoPlayer:
             self.builder.get_object("box3").hide()
             self.is_fullscreen = True   
     
+    def toggle_playpause(self):
+        if self.is_playing:
+            self.pause()
+            self.is_playing = False
+        else:
+            self.play()
+            self.is_playing = True
+
     def _openVideo(self):
         self.window.set_title( self.files[self.index] )
         self.player.set_state(Gst.State.NULL)
@@ -190,8 +199,12 @@ class VideoPlayer:
             return True
         elif key == 'f' or key == 'F11':
             self.toggle_fullscreen()
-        elif key == 'Escape':
+        elif key == 'space':
+            self.toggle_playpause()
+        elif key == 'Escape':        
             Gtk.main_quit()
+        else:
+            print ('KEY:' + key)    
 
     def play(self):
         self.is_playing = True
